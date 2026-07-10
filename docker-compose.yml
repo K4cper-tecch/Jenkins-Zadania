@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # Kontener z bazą danych PostgreSQL
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: django_db
+      POSTGRES_USER: django_user
+      POSTGRES_PASSWORD: django_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - network_backend
+    # BRAK sekcji 'ports' - baza NIE JEST eksponowana na świat (Zadanie z sieci)
+
+  # Kontener z aplikacją Django
+  web:
+    build: .
+    command: >
+      bash -c "python mysite/manage.py migrate &&
+               python mysite/manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    environment:
+      - DB_HOST=db
+      - DB_NAME=django_db
+      - DB_USER=django_user
+      - DB_PASSWORD=django_password
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - network_backend
+      - network_frontend
+
+  # Panel administracyjny PGAdmin
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - network_frontend
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
+
+# Definicje sieci (Zadanie z sieci i administracji)
+networks:
+  network_backend:
+    internal: true # Pełna izolacja bazy danych
+  network_frontend:
